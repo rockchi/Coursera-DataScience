@@ -9,22 +9,25 @@ For code:
 - pollutantmean.R
 
 In the given scenario, we were given a zip file containing 332 CSV files. Each file represents a pollution montior, which tracked data including:
-Date: date of observation (YYYY-MM-DD format)
-Sulfate: level of sulfate PM in air on that date
-Nitrate: level of nitrate PM in air on that date
+-- Date: date of observation (YYYY-MM-DD format)
+- Sulfate: level of sulfate PM in air on that date
+- Nitrate: level of nitrate PM in air on that date
 
 ####pollutantmean.R
 > pollutantmean(directory, pollutant, id=1:332)
+
 Function, pollutantmean(), calculates the mean of specified pollutant across a given list of monitor ID.
 Default function calculates mean of specified pollutant across all monitors.
 Mean calculation ignores NA values
 
 ####complete.R
 > complete(directory, id)
+
 Function, complete.R, provides back a dataframe containing monitor ID and number of complete case records for the ID array.
 
 ####corr.R
 > corr(directory, threshold)
+
 The function calculates correlation between nitrate and sulfate for all the records. 
 However, the additional variable, threshold, allows the user to filter out monitors with complete cases not above specified threshold.
 The output of the function returns a dataframe containng each monitor ID and respective Correlation Coefficient.
@@ -42,10 +45,12 @@ Data files given include:
 
 ####best.R
 > best(state, outcome)
+
 With State and outcome, including heart attack, heart failure or pneumonia, identified, the function returns the best hospital identifed by lowest 30-day mortality rate of specified outcome
 
 ####rankhospital.R 
 > rankhospital(state, outcome, num)
+
 This function allows the user to query for a given rank (num) for a specified State and outcome.
 The num variable does not have to be numeric, it can also be "best" or "worst", indicating highest rank (1) or lowest rank.
 Like best.R, the function will stop if specified query is invalid.
@@ -53,4 +58,5 @@ Tied ranks are settled by name alphabetical ordering.
 
 ####rankall.R	
 > rankall(outcome, num)
+
 The function works similarly to rankhospital.R. However, this function provides the hospital of specified rank and outcome across all State in a dataframe format.
