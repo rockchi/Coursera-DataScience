@@ -32,10 +32,12 @@ rankall <- function(outcome, num="best"){
                         sampleoutput <- as.list(c(NA, StateName))
                         TotalRankings <- rbind(TotalRankings, sampleoutput)
                         next
+                }else{
+                        rankseek <- num
                 }
                 sampleoutput <- subset(sample, ranking==rankseek)
                 sampleoutput$"state" <- StateName
-                colnames(sampleoutput)[1] <- "hospital name"
+                colnames(sampleoutput)[1] <- "hospital"
                 TotalRankings <- rbind(TotalRankings, sampleoutput[,c(1,4)]) 
         }
         TotalRankings <- TotalRankings[order(TotalRankings[,2]),]
