@@ -1,0 +1,135 @@
+---
+title: "lc2 - Variability"
+author: "Rock Chi"
+date: "Saturday, October 17, 2015"
+output: html_document
+---
+
+##Introduction to Varability
+
+
+##Population Variance
+Mean describes where center of your data's distribution. Another property used to describe distributions is variance. Variance describes the spread, width, concentration of the distribution which lies around the mean.
+
+$$ Var(X) = E[(X - \mu)^2] = E[X^2] - E[X]^2 $$ 
+Given that X has Variance, $Var(X)$ around mean $\mu$, Expected Variance is the expected squared distance away from the mean.
+
+- Variance is expressed as units of X-squared.
+- Standard deviation is the square-root of variance, expressed in units of X. 
+
+To visualise the effect of different variance levels:
+```{r, echo=TRUE}
+library(ggplot2)
+xvals <- seq(-10, 10, by = .01)
+dat <- data.frame(
+    y = c(
+        dnorm(xvals, mean = 0, sd = 1),
+        dnorm(xvals, mean = 0, sd = 2),
+        dnorm(xvals, mean = 0, sd = 3),
+        dnorm(xvals, mean = 0, sd = 4)
+    ),
+    x = rep(xvals, 4),
+    factor = factor(rep(1 : 4, rep(length(xvals), 4)))
+)
+ggplot(dat, aes(x = x, y = y, color = factor)) + geom_line(size = 2)    
+```
+
+As variance increases, there are more mass to the tails. Conversely, as variance decreases, density becomes more concentrated around the center, mean.
+
+##Sample Variance
+Much like population mean and sample mean, population variance and sample variance can be estimated similarly. 
+$$ S^2 = \frac{\sum_{i=1} (X_i - \bar X)^2}{n-1} $$
+
+- conceptually, estimated as the average squared deviation from the sample mean
+
+Like Sample Mean, Sample Variance is also a random/varies in each sample with its corresponding population variance. With greater N, more data, the expected population variance estimated by the sample variance becomes more concentrated. 
+
+###Sample Variance Simulation (Variance of Expected Variance)
+In the given example, the simulation illustrated the effect of sample size, n, on sample variance. Drawn values all come from standard normal distributions; Thus, population variance is 1 with mean 0. 
+
+```{r, echo=TRUE}
+#Three matrices were created. 
+#rnorm() generates a total of 10000*n observations 
+#Each row consists of 10000, making each matrix 10,000 by n columns
+#Var() function is applied to each row; Result DF contains 100 sample variance values
+library(ggplot2)
+nosim <- 10000; 
+dat <- data.frame(
+    x = c(apply(matrix(rnorm(nosim * 10), nosim), 1, var),
+          apply(matrix(rnorm(nosim * 20), nosim), 1, var),
+          apply(matrix(rnorm(nosim * 30), nosim), 1, var)),
+    n = factor(rep(c("10", "20", "30"), c(nosim, nosim, nosim))) 
+    )
+ggplot(dat, aes(x = x, fill = n)) + geom_density(size = 2, alpha = .2) + geom_vline(xintercept = 1, size = 2)
+```
+
+As the sample size increases, the average of sample variance approaches population variance of 1. In other words, with more data, we can expect sample variance to become more concentrated around the expected value of population variance. 
+
+#Sample Mean and Variance of Sample Mean
+Given that the population has mean, $$E[\bar X] = \mu$$
+And variance of population mean is, $$Var(\bar X) = \sigma^2 / n$$
+
+As we gather more data (increasing n), variance of mean decreases to near 0.
+
+Unlike the simulation which we have previously ran, in an experiment, we only have one mean and are unable to sample all means to estimate true variance of mean. Thus, we use the sample distribution's parameters to estimate the variance of mean.
+
+###The Logic of Variance Estimation
+From before we know that:
+
+- Distribution of sample variance is centered around $S^2$
+- The sample variance, $S^2$, estimates the population variance, $\sigma^2$
+- Likewise, standard deviation of the population is estimated as $s$
+
+Similarly:
+
+- Population variance of sample mean is $\sigma^2 / n$
+- Thus, using variance from our data, we would estimate variance of sample mean as $s^2 / n$
+- Following from this, standard error (of the mean) is $s / \sqrt{n}$
+
+###Standard Deviation vs. Standard Error
+- $s$ (Standard Deviation) is about how variable the population is.
+- $s/\sqrt{n}$ (Standard Error) talks about how variable averages of random samples of size $n$ from the population are
+
+###Simulation of Variance of Mean
+Pulling observations from standard normal distribution, we know that standard normals have variance of 1.
+Means of 0 and Mean of $n$ draws from standard normal to have standard deviations of $1/\sqrt{n}$
+```{r, echo=TRUE}
+#Creates a matrix of 1000 rows and 10 variables (n)
+#mean() is applies to each row creating single vector of 1000 means
+#sd() is then applied to each mean
+nosim <- 1000
+n <- 10
+sd(apply(matrix(rnorm(nosim * n), nosim), 1, mean))
+```
+Now that we have a simulated standard error of means, we use our formula which also approximates this. We can expect that as n increases, accuracy 
+```{r, echo=TRUE}
+n <- 10
+1 / sqrt(n)
+```
+
+#Overview of Variability with Data
+```{r, echo=TRUE}
+library(UsingR); data(father.son); 
+x <- father.son$sheight
+n<-length(x)
+```
+
+From this given data, below is a plot of Son's Height (y) given Father's Height (x)
+```{r, echo=TRUE}
+g <- ggplot(data = father.son, aes(x = sheight)) 
+g <- g + geom_histogram(aes(y = ..density..), fill = "lightblue", binwidth=1, colour = "black")
+g <- g + geom_density(size = 2, colour = "black")
+g
+```
+
+Below are the possible metrics that can be calculated on the distribution
+```{r, echo=TRUE}
+round(c(var(x), var(x) / n, sd(x), sd(x) / sqrt(n)),2)
+```
+- $var(x)$ is the sample variance
+- $var(x)/n$ is the variance of mean
+- $sd(x)$ is the standard deviation
+- $sd(x) / sqrt(n)$ is the standard error
+
+- key takeaway: A reason why averages and variance is important is that despite only having one sample (look) taken from the population, the true population's properties can be inferred (described) from these measures.
+
