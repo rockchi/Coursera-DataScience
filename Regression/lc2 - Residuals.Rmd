@@ -1,0 +1,303 @@
+---
+title: "lc2 - Residuals"
+author: "Rock Chi"
+date: "Sunday, October 18, 2015"
+output: html_document
+---
+
+Without any predictors/regressors, the following is the distribution/variance of price.
+
+```{r, echo=TRUE, warning=FALSE}
+library(UsingR)
+library(ggplot2)
+data(diamond)
+mean(diamond$price)
+ggplot(diamond, aes(x=1, y=price)) +
+        geom_dotplot(binaxis="y", binwidth=1, method="histodot") +
+        xlab("Mass (carats)") +
+        ylab("Price (SIN $)") +
+        xlim(0.75, 1.25) +
+        ylim(200, 1100) +
+        scale_y_continuous(breaks=seq(200,1100,100)) +
+        geom_abline(intercept=500.0833)
+```
+
+Now with carat as a regressor, we can see how carat helps explain some of the variance in price.
+
+```{r, echo=TRUE, warning=FALSE}
+ggplot(diamond, aes(x = carat, y = price)) +
+        xlab("Mass (carats)") +
+        ylab("Price (SIN $)") +
+        ylim(200, 1100) +
+        scale_y_continuous(breaks=seq(200,1100,100)) +
+        geom_point() +
+        geom_smooth(method = "lm", colour = "black") +
+        geom_abline(intercept=500.0833)
+```
+
+With the price now distributed around the regression line, price is distributed about the regression lines. In other words, variation is reduced. However, as we can see how the points are still scattered about, there is still some variations not explained by the regression line, which we call "residual variation". Distance of point from regression line is what we call residual.
+
+##Residuals
+Recall that in a model:
+$Y_i = \beta_0 + \beta_1 X_i + \epsilon_i$
+
+For every observed outcome, $Y_i$ at predictor value $X_i$ is given by $$ \hat Y_i = \hat \beta_0 + \hat \beta_1 X_i $$
+
+Residual, the vertical distance between the observed and predicted outcome is provided by $$ e_i = Y_i - \hat Y_i $$
+
+- You can think of $e_i$ as an estimate of $\epsilon_i$
+- Note that $e_i$ can also be reduced by adding in unrelated regressors (overfit)
+
+In the linear model, it optimizes estimation by minimizing $\sum_{i=1}^n e_i^2$, vertical distance between the regression line and the predicted value. This providing the following properties to residuals in linear models:
+
+- $E[e_i] = 0$
+- If an intercept is included, $\sum_{i=1}^n e_i = 0$
+- If a regressor variable, $X_i$, is included in the model $\sum_{i=1}^n e_i X_i = 0$. 
+- Residuals can be thought of outcome($Y$) with linear association of predictor($X$) removed
+- Can help highlight poor fit
+
+- Residual Variation is the variation which is left over after removing the predictor/accounted by the model
+- Systematic Variation is the variation explained by the model
+- Residual Variation $!=$ Systematic Variation
+
+###Residuals by Code
+Two ways for retrieving residuals
+```{r, echo=TRUE, warning=FALSE}
+data(diamond)
+y <- diamond$price; x <- diamond$carat; n <- length(y)
+fit <- lm(y ~ x)
+
+#First method
+e <- resid(fit)
+yhat <- predict(fit)
+max(abs(e -(y - yhat)))
+#Second Method
+max(abs(e - (y - coef(fit)[1] - coef(fit)[2] * x)))
+#Sum of Residual
+sum(e)
+```
+
+##Visualising Residuals
+```{r, echo=TRUE, warning=FALSE}
+plot(diamond$carat, diamond$price,  
+     xlab = "Mass (carats)", 
+     ylab = "Price (SIN $)", 
+     bg = "lightblue", 
+     col = "black", cex = 2, pch = 21,frame = FALSE)
+abline(fit, lwd = 2)
+for (i in 1 : n) 
+  lines(c(x[i], x[i]), c(y[i], yhat[i]), col = "red" , lwd = 2)
+```
+
+The red lines, vertical distances between predicted and observed are the residuals. However, this plot does not effectively utilize graph's space and can be difficult to evaluate magnitude and pattern of the residual distances.
+
+```{r, echo=TRUE, warning=FALSE}
+plot(x, e,  
+     xlab = "Mass (carats)", 
+     ylab = "Residuals (SIN $)", 
+     bg = "lightblue", 
+     col = "black", cex = 2, pch = 21,frame = FALSE)
+abline(h = 0, lwd = 2)
+for (i in 1 : n) 
+  lines(c(x[i], x[i]), c(e[i], 0), col = "red" , lwd = 2)
+```
+
+From this residual plot, we can see that residuals are evenly distributed across with no pattern. Another feature that can be observed is the count of data distributed at specific points. This is less obvious from just a scatterplot. 
+
+Although the model is wrong, the model does capture the linear trend. It just neglects the secondary variation. Meaningful information of trend can still be interpreted from imperfect models. 
+
+##Why Residuals Matter
+
+###Simulation 1: Identifying Non-Linear Pattern
+In the following example, we simulate data that follows a nonlinear trend. 
+```{r, echo=TRUE, warning=FALSE}
+#We pull 100 random from Uniform(-3,3)
+#NonLinear line: sin(x) pattern with noise from normal with sd=0.2
+x = runif(100, -3, 3); y = x + sin(x) + rnorm(100, sd = .2); 
+library(ggplot2)
+#Plot - Linear Fit of Model and Observed Points
+g = ggplot(data.frame(x = x, y = y), aes(x = x, y = y))
+g = g + geom_smooth(method = "lm", colour = "black")
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g
+```
+
+From this plot, we can observed the pattern. However, with the following residual plot, the pattern becomes much more apparent.
+
+```{r, echo=TRUE, warning=FALSE}
+g = ggplot(data.frame(x = x, y = resid(lm(y ~ x))), 
+           aes(x = x, y = y))
+g = g + geom_hline(yintercept = 0, size = 2); 
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g = g + xlab("X") + ylab("Residual")
+g
+```
+
+###Simulation 2: Heteroskedasticity
+In the following simulation, we pull samples for a normal distribution. However, note that standard deviation is a function of x. The function on the whole exhibits heteroskedasticity.
+
+Heteroskedasticity means that variance of the variable ($Y$ in this case) is uneven. As $X$ increases, variability of $Y$ increases (again, in this case)
+
+```{r, echo=TRUE, warning=FALSE}
+#Note that standard deviation is a function of x
+#In other words, variance of function Y(x) is not constant
+x <- runif(100, 0, 6); y <- x + rnorm(100,  mean = 0, sd = .001 * x); 
+g = ggplot(data.frame(x = x, y = y), aes(x = x, y = y))
+g = g + geom_smooth(method = "lm", colour = "black")
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g
+```
+
+From the plot of the linear fit, heteroskedasticity is not apparent in the variance of observed values about the regression line.
+
+```{r, echo=TRUE, warning=FALSE}
+g = ggplot(data.frame(x = x, y = resid(lm(y ~ x))), 
+           aes(x = x, y = y))
+g = g + geom_hline(yintercept = 0, size = 2); 
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g = g + xlab("X") + ylab("Residual")
+g
+```
+
+Switching to the residual plot, heteroskedasticity can be observed. As X increases, variance fans out (increases).
+
+###Visualising Variance Explained by Model
+In the following visualisation, we further depict the effect of regression. In the first model, there are no regressors. Residual about mean price is seen. On the other hand, the second model has carat as a regressor. We can see how the model with carat as regressor changes variance of residuals.
+
+```{r, echo=TRUE, warning=FALSE}
+#Vector e; nrow(diamond) is residual about average while other half is residual about regression line
+#Factor Vector as placeholder for ggplot. Same length as e
+e = c(resid(lm(price ~ 1, data = diamond)),
+      resid(lm(price ~ carat, data = diamond)))
+fit = factor(c(rep("Itc", nrow(diamond)),
+               rep("Itc, slope", nrow(diamond))))
+#Plot - Comparision of Residual
+g = ggplot(data.frame(e = e, fit = fit), aes(y = e, x = fit, fill = fit))
+g = g + geom_dotplot(binaxis = "y", size = 2, stackdir = "center", binwidth = 20)
+g = g + xlab("Fitting approach")
+g = g + ylab("Residual price")
+g
+```
+
+From the graphic, we can visibly see a reduction in variance. This reduction can be said to be the variance explained by the regression model.
+
+##Variability Overview
+
+###Total Variability
+
+$$\sum_{i=1}^n (Y_i - \bar Y)^2$$
+
+To visualize this, you can think of it as the following graphic. 
+```{r, echo=TRUE, warning=FALSE}
+ggplot(diamond, aes(x=1, y=price)) +
+        geom_dotplot(binaxis="y", binwidth=1, method="histodot") +
+        xlab("Mass (carats)") +
+        ylab("Price (SIN $)") +
+        xlim(0.75, 1.25) +
+        ylim(200, 1100) +
+        scale_y_continuous(breaks=seq(200,1100,100)) +
+        geom_abline(intercept=500.0833)
+```
+
+Total variability is the summation of for every $Y_i$ subtracted from $\bar Y$, the mean of $Y$
+
+
+###Regression Variability
+
+$$\sum_{i=1}^n (\hat Y_i - \bar Y)^2$$
+
+To visualise this, you can think of variability explain by the regression as the distance between the regression line and the horizontal line which depicts the mean $Y$
+```{r, echo=TRUE, warning=FALSE}
+ggplot(diamond, aes(x = carat, y = price)) +
+        xlab("Mass (carats)") +
+        ylab("Price (SIN $)") +
+        ylim(200, 1100) +
+        scale_y_continuous(breaks=seq(200,1100,100)) +
+        geom_smooth(method = "lm", colour = "black") +
+        geom_abline(intercept=500.0833)
+```
+
+
+###Error Variability (Residual Variability)
+
+$$\sum_{i=1}^n (Y_i - \hat Y_i)^2$$
+
+Again to visualise this, you can think of varaibility not explained by the regression line as the vertical distance between the observed points and the regression line itself. It is the variability not explained by the model.
+
+```{r, echo=TRUE, warning=FALSE}
+ggplot(diamond, aes(x = carat, y = price)) +
+        xlab("Mass (carats)") +
+        ylab("Price (SIN $)") +
+        ylim(200, 1100) +
+        scale_y_continuous(breaks=seq(200,1100,100)) +
+        geom_point() +
+        geom_smooth(method = "lm", colour = "black")
+```
+
+##Implications: R-Squared
+Because, 
+
+$$ \sum_{i=1}^n (Y_i - \bar Y)^2 = \sum_{i=1}^n (Y_i - \hat Y_i)^2 + \sum_{i=1}^n (\hat Y_i - \bar Y)^2 $$
+
+From the variability measures given above, we can calculate R-Squared.(Percentage of the Variability represented by the model)
+
+$$R^2 = \frac{\sum_{i=1}^n (\hat Y_i - \bar Y)^2}{\sum_{i=1}^n (Y_i - \bar Y)^2} $$
+
+####Key Facts of R-Squared
+
+1) The metric can be thought of as the Variability Explained by the Model (Regression Varability) over Total Variabiltiy.
+2) R-Squared is the sample correlation squared
+
+A note of Model Fit:
+
+In a way, R-Squared doesn't directly measure model fit. Instead, it only tells us amount of reduced variance. We infer that the reduced variance is because the model is a good fit to the unknown relationship.
+
+- ie.1 by deleting data, we can inflate R-Squared
+- ie.2 R-Squared will always increase when regressors are added
+
+####Anscombe Illustration
+For more information on [Anscombe's Quartet](https://en.wikipedia.org/wiki/Anscombe's_quartet)
+
+```{r, echo=TRUE, warning=FALSE}
+require(stats); require(graphics); data(anscombe)
+ff <- y ~ x
+mods <- setNames(as.list(1:4), paste0("lm", 1:4))
+for(i in 1:4) {
+  ff[2:3] <- lapply(paste0(c("y","x"), i), as.name)
+  ## or   ff[[2]] <- as.name(paste0("y", i))
+  ##      ff[[3]] <- as.name(paste0("x", i))
+  mods[[i]] <- lmi <- lm(ff, data = anscombe)
+  #print(anova(lmi))
+}
+
+sapply(anscombe, mean)
+sapply(anscombe, var)
+```
+
+In this unique dataset, X and Y all have the same mean and variance. Additionally, when calculated, Correlation and R-Squared are the same for all $X_i$ and $Y_i$ sets. 
+
+```{r, echo=TRUE, warning=FALSE}
+## Now, do what you should have done in the first place: PLOTS
+op <- par(mfrow = c(2, 2), mar = 0.1+c(4,4,1,1), oma =  c(0, 0, 2, 0))
+for(i in 1:4) {
+  ff[2:3] <- lapply(paste0(c("y","x"), i), as.name)
+  plot(ff, data = anscombe, col = "red", pch = 21, bg = "orange", cex = 1.2,
+       xlim = c(3, 19), ylim = c(3, 13))
+  abline(mods[[i]], col = "blue")
+}
+mtext("Anscombe's 4 Regression data sets", outer = TRUE, cex = 1.5)
+par(op)
+```
+
+By plotting out the values, we see the hidden pattern which mean, variance and R-Square does not show. 
+
+- x1 depicts the standard regression line with slight noise
+- x2 indicates a missing term that should be included in the model to address the curvature
+- x3 shows an outlier skewing the regression line
+- x4 shows values stacked in one location with one point at the end. There is no information contained for values between
+
+From this example, the takeway is that high R-Square does not necessarily automatic mean a good model fit. 

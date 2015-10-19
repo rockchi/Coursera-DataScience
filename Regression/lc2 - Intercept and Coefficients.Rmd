@@ -1,0 +1,103 @@
+---
+title: "lc2 - On Intercept and Coefficients"
+author: "Rock Chi"
+date: "Sunday, October 18, 2015"
+output: html_document
+---
+
+##Linear Regression
+The basic linear model:
+$$ Y_i = \beta_0 + \beta_1 X_i + \epsilon_{i} $$
+
+Moving Parts of the Model:
+$\epsilon_{i}$ are assumed iid $N(0, \sigma^2)$
+
+- cumulation of errors from variables missing from the model which we should have modeled
+
+
+$E[Y_i ~|~ X_i = x_i] = \mu_i = \beta_0 + \beta_1 x_i$
+
+- the expected value of response Y given regressor x is estimated as the value on the line, $\beta_0 + \beta_1 x_i$
+
+
+$Var(Y_i ~|~ X_i = x_i) = \sigma^2$
+
+- the variance of response Y at any particular point is $\sigma^2$
+- this is different from the variance of response Y. It is the variance of Y around the regression line at any point. Thus, lower than the actual variance of Y because some of the variance has been already explained the regressor
+
+
+##Understanding Regression Coefficients
+Intercept Interpretation
+$$ E[Y | X = 0] = \beta_0 + \beta_1 \times 0 = \beta_0 $$
+
+- $\beta_0$, the intercept, is the expected value of the response when predictors are held at 0
+- sometimes, predictors held at 0 may not be of interest (ie. heart pressure)
+
+Shifting Regression Variables Away from Intercept 0
+ $$ Y_i = \beta_0 + \beta_1 X_i + \epsilon_i = \beta_0 + a \beta_1 + \beta_1 (X_i - a) + \epsilon_i = \tilde \beta_0 + \beta_1 (X_i - a) + \epsilon_i $$
+
+- $X$ values are all shifted by a constant of $a$. Intercept is changed, but slope is not
+- $a \beta_1$ is added back in changing the intercept
+- a possible constant that could be subtracted is the mean
+ 
+###Simulated Example of Mean Centering
+From the Diamond Data, we estimate diamond prices (Singapore Dollars) with carat.
+```{r, echo=TRUE}
+library(UsingR)
+data(diamond)
+
+fit1 <- lm(price ~ carat, data=diamond)
+coef(fit1)
+```
+
+From this output, we see when diamond carat is 0, price will be -259! This is not useful for interpretation and inference. Thus, we use mean centering to tease out better information.
+```{r, echo=TRUE}
+fit2 <- lm(price ~ I(carat-mean(carat)), data=diamond)
+coef(fit2)
+```
+
+This output expresses the intercept as the expected price of average sized diamonds.
+
+##Coefficient Interpretation
+- $\beta_1$ is the expected change in response for a 1 unit change in the predictor
+
+On changing scale/unit of X
+$X$. $$ Y_i = \beta_0 + \beta_1 X_i + \epsilon_i = \beta_0 + \frac{\beta_1}{a} (X_i a) + \epsilon_i = \beta_0 + \tilde \beta_1 (X_i a) + \epsilon_i $$
+
+- From this equation, we understand that by multiplying regressor $x$ by $a$, we are dividing the coefficients by $a$
+
+###Simulated Example of Unit Changing
+Using the diamond dataset again, we predict diamond prices using the same model. However, instead of price change per carat, we would like to see price change per 0.1 carat.
+
+```{r, echo=TRUE}
+fit3 <- lm(price ~ I(carat*10), data=diamond)
+coef(fit3)
+```
+
+
+##Summary of Scaling and Unit Change
+To illustrate the changes from the three transformations:
+```{r, echo=TRUE}
+ggplot(diamond, aes(carat, y=price)) +
+        stat_smooth(method="lm", formula=y ~ x, se=FALSE, color="red") +
+        stat_smooth(method="lm", formula=y ~ I(x-mean(x)), se=FALSE, color="blue") +
+        stat_smooth(dmethod="lm", formula=y ~ I(x*10), se=FALSE, color="green")
+```
+
+Red line is the non-transformed regression line. X-Intercept is at a negative value.
+
+Blue line is the mean-shifted regression line. X-Intercept is now at the expected value of average price for average size
+
+Green line is the unit shifted regression line. As we can see, slope is changed. This is because unit scale of slope has been changed.
+
+
+###Predict Function
+The following demonstrates how the predict function work.
+```{r, echo=TRUE}
+newx <- c(0.16, 0.27, 0.34)
+#Using the formula (coef 1 == intercept/beta0, coef 2 == beta1)
+coef(fit1)[1] + coef(fit1)[2] * newx
+#Using prediction function
+predict(fit1, newdata=data.frame(carat=newx))
+```
+As we can see, both are equivalent.
