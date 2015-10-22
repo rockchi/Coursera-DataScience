@@ -1,0 +1,188 @@
+---
+title: "lc2 - Asymptotics and CI"
+author: "Rock Chi"
+date: "Wednesday, October 21, 2015"
+output: html_document
+---
+
+##Asymptotics
+- Asymptotics is the term for the behavior of statistics as the sample size (or some other relevant quantity) limits to infinity (or some other relevant number)
+- Forms the basis for frequency interpretation of probabilities
+
+##Limits of Random Variables (Law of Large Numbers/LNN)
+- The average limits to what it is estimating, the population mean
+
+```{r,echo=TRUE}
+library(ggplot2)
+n <- 10000; means <- cumsum(rnorm(n)) / (1  : n); library(ggplot2)
+g <- ggplot(data.frame(x = 1 : n, y = means), aes(x = x, y = y)) 
+g <- g + geom_hline(yintercept = 0) + geom_line(size = 2) 
+g <- g + labs(x = "Number of obs", y = "Cumulative mean")
+g
+```
+
+The graphic above demonstrates the law of large numbers. As number of sample observations (n) increases, it gets closer and closer to the population mean. 
+
+###Implications
+- An estimators can then be considered consistent if it averages to what you estimate
+- LNN says that sample mean of $iid$ (Independent and Identifcally Distributed) samples is consistent for the population mean
+
+##Central Limit Theorem (CLT)
+CLT states that distribution of averages of $iid$ variables become standard normal as sample size increases
+
+$$\frac{\bar X_n - \mu}{\sigma / \sqrt{n}}= \frac{\sqrt n (\bar X_n - \mu)}{\sigma} = \frac{\mbox{Estimate} - \mbox{Mean of estimate}}{\mbox{Std. Err. of estimate}}$$
+
+- $\bar X_n$ can be estimates like sample average, sample variance
+- replacing standard error by its estimated value doesn't change the CLT 
+- another way to conceptualize: CLT is that $\bar X_n$ is approximately $N(\mu, \sigma^2 / n)$
+
+###Simulation - Normalized Dice Rolls
+Given that $X_i$ be the outcome for die $i$, $\mu = E[X_i] = 3.5$, $Var(X_i) = 2.92$ and SE $\sqrt{2.92 / n} = 1.71 / \sqrt{n}$
+
+In the simulation below, we roll $n$ dice, take their mean, subtract off 3.5, and divide by $1.71 / \sqrt{n}$ and repeat this over and over. (normalize)
+
+```{r}
+nosim <- 1000
+cfunc <- function(x, n) sqrt(n) * (mean(x) - 3.5) / 1.71
+dat <- data.frame(
+  x = c(apply(matrix(sample(1 : 6, nosim * 10, replace = TRUE), 
+                     nosim), 1, cfunc, 10),
+        apply(matrix(sample(1 : 6, nosim * 20, replace = TRUE), 
+                     nosim), 1, cfunc, 20),
+        apply(matrix(sample(1 : 6, nosim * 30, replace = TRUE), 
+                     nosim), 1, cfunc, 30)
+        ),
+  size = factor(rep(c(10, 20, 30), rep(nosim, 3))))
+g <- ggplot(dat, aes(x = x, fill = size)) + geom_histogram(alpha = .20, binwidth=.3, colour = "black", aes(y = ..density..)) 
+g <- g + stat_function(fun = dnorm, size = 2)
+g + facet_grid(. ~ size)
+```
+
+As expected, the resultant distribution is centered around 0 because we had subtracted off the mean 3.5. Additionally, the shape of the curve is that of standard normal/Gaussian
+
+###Simulation - Normalized Flips of Unfair Coin
+- Given $X_i$ be the $0$ or $1$ result of the $i^{th}$ flip of a possibly unfair coin
+- Sample proportion, say $\hat p$, is the average of the coin flips $E[X_i] = p$ and $Var(X_i) = p(1-p)$
+- Standard error of the mean is $\sqrt{p(1-p)/n}$
+- $$ \frac{\hat p - p}{\sqrt{p(1-p)/n}} $$ will be approximately normally distributed
+
+- Given the facts above, in the simulation, we flip a coin $n$ times, take the sample proportion of heads, subtract off .5 and multiply the result by $2 \sqrt{n}$ (divide by $1/(2 \sqrt{n})$)
+
+```{r, echo=FALSE}
+nosim <- 1000
+cfunc <- function(x, n) 2 * sqrt(n) * (mean(x) - 0.5) 
+dat <- data.frame(
+  x = c(apply(matrix(sample(0:1, nosim * 10, replace = TRUE), 
+                     nosim), 1, cfunc, 10),
+        apply(matrix(sample(0:1, nosim * 20, replace = TRUE), 
+                     nosim), 1, cfunc, 20),
+        apply(matrix(sample(0:1, nosim * 30, replace = TRUE), 
+                     nosim), 1, cfunc, 30)
+        ),
+  size = factor(rep(c(10, 20, 30), rep(nosim, 3))))
+g <- ggplot(dat, aes(x = x, fill = size)) + geom_histogram(binwidth=.3, colour = "black", aes(y = ..density..)) 
+g <- g + stat_function(fun = dnorm, size = 2)
+g + facet_grid(. ~ size)
+```
+
+Similar to the dice rolls, we see that the normalized values become normally distributed as observation increases. However, rate at which normalized values become normally distributed is dictated also by the probabilities of the coin. To illustrate this, the following has $p=0.9$
+
+```{r,echo=TRUE}
+nosim <- 1000
+cfunc <- function(x, n) sqrt(n) * (mean(x) - 0.9) / sqrt(.1 * .9)
+dat <- data.frame(
+  x = c(apply(matrix(sample(0:1, prob = c(.1,.9), nosim * 10, replace = TRUE), 
+                     nosim), 1, cfunc, 10),
+        apply(matrix(sample(0:1, prob = c(.1,.9), nosim * 20, replace = TRUE), 
+                     nosim), 1, cfunc, 20),
+        apply(matrix(sample(0:1, prob = c(.1,.9), nosim * 30, replace = TRUE), 
+                     nosim), 1, cfunc, 30)
+        ),
+  size = factor(rep(c(10, 20, 30), rep(nosim, 3))))
+g <- ggplot(dat, aes(x = x, fill = size)) + geom_histogram(binwidth=.3, colour = "black", aes(y = ..density..)) 
+g <- g + stat_function(fun = dnorm, size = 2)
+g + facet_grid(. ~ size)
+```
+
+##Confidence Intervals
+Sample mean, $\bar X$, is approximately normal with mean $\mu$ and sd $\sigma / \sqrt{n}$. From this, we know that either $\mu + 2 \sigma /\sqrt{n}$ or $\mu - 2 \sigma /\sqrt{n}$ will both be far out (with only 5% chance being greater or smaller than 2sd)
+
+- Probability between these values are the CI, with probability between them being 95%
+- 95% refers to the fact that if one were to repeatedly get samples $n$, about 95% of the intervals obtained would contain $mu$
+
+###Wald's Confidence Interval (for binomial)
+- In the event that each $X_i$ is $0$ or $1$ with common success probability $p$ then $\sigma^2 = p(1 - p)$
+- Interval takes the form $$ \hat p \pm z_{1 - \alpha/2} \sqrt{\frac{p(1 - p)}{n}} $$
+- Replacing $p$ by $\hat p$ in the standard error results in what is called a Wald confidence interval for $p$
+- For 95% intervals $$\hat p \pm \frac{1}{\sqrt{n}}$$ is a quick CI estimate for $p$
+
+To compare various methods of calculating CI:
+
+In a campaign of 100 voters, 56 has expressed intent to vote for you. What is the CI?
+```{r, echo=TRUE}
+#Method 1: Wald's Confidence Interval
+1/sqrt(100)
+
+#Method 2: Plugging Value into CI Formula
+round(1 / sqrt(10 ^ (1 : 6)), 3)
+
+#Method 3: Binom.Test Simulation
+binom.test(56, 100)$conf.int
+```
+
+###Simulation - Showing 95% CI Procedure and Error Cases
+In the following simulations, we vary the coin flip probability between 0.1 and 0.9 by increments of 0.05. For each set of flips with the given pval, 1000 iterations of 20 flips are done. Sample mean along with 95% CI are calculated. Coverage is the percent of times the true mean (pval) is below the upper limit and greater than the lower limit.
+
+```{r, echo=TRUE}
+n <- 20; pvals <- seq(.1, .9, by = .05); nosim <- 1000
+coverage <- sapply(pvals, function(p){
+  phats <- rbinom(nosim, prob = p, size = n) / n
+  ll <- phats - qnorm(.975) * sqrt(phats * (1 - phats) / n)
+  ul <- phats + qnorm(.975) * sqrt(phats * (1 - phats) / n)
+  mean(ll < p & ul > p)
+})
+```
+
+From the simulation we plot the results.
+
+```{r, echo=TRUE}
+ggplot(data.frame(pvals, coverage), aes(x = pvals, y = coverage)) + geom_line(size = 2) + geom_hline(yintercept = 0.95) + ylim(.75, 1.0)
+```
+
+In the graphic above, we see how accuracy of CI decays. The implication from the simulation depicts how CLT do not hold for the given $n$ (size of observations) and $p$ (probability).
+
+####Solution (Agresti/Coull)
+As stated in CLT, normalized values will approach normality given increased number of $n$. To show this, we have the following simulation.
+
+```{r, echo=TRUE}
+n <- 100; pvals <- seq(.1, .9, by = .05); nosim <- 1000
+coverage2 <- sapply(pvals, function(p){
+  phats <- rbinom(nosim, prob = p, size = n) / n
+  ll <- phats - qnorm(.975) * sqrt(phats * (1 - phats) / n)
+  ul <- phats + qnorm(.975) * sqrt(phats * (1 - phats) / n)
+  mean(ll < p & ul > p)
+})
+ggplot(data.frame(pvals, coverage), aes(x = pvals, y = coverage2)) + geom_line(size = 2) + geom_hline(yintercept = 0.95)+ ylim(.75, 1.0)
+```
+
+However, increase $n$ may not be possible especially when data-gathering has already ended. The following is an alternative fix (Agresti/Coull CI):
+
+$$ \frac{X + 2}{n + 4} $$
+
+Again to demonstrated the effect of this fix, adding 2 success and failures:
+
+```{r, echo=TRUE}
+n <- 20; pvals <- seq(.1, .9, by = .05); nosim <- 1000
+coverage <- sapply(pvals, function(p){
+  phats <- (rbinom(nosim, prob = p, size = n) + 2) / (n + 4)
+  ll <- phats - qnorm(.975) * sqrt(phats * (1 - phats) / n)
+  ul <- phats + qnorm(.975) * sqrt(phats * (1 - phats) / n)
+  mean(ll < p & ul > p)
+})
+ggplot(data.frame(pvals, coverage), aes(x = pvals, y = coverage)) + geom_line(size = 2) + geom_hline(yintercept = 0.95)+ ylim(.75, 1.0)
+```
+
+##Takeways
+- LLN states that averages of iid samples converge to the population means that they are estimating
+
+- CLT states that averages are approximately normal, with distributions centered as population mean and standard deviations equal to standard error of the mean

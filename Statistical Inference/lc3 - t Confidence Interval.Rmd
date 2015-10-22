@@ -1,0 +1,119 @@
+---
+title: "lc3 - T Confidence Intervals"
+author: "Rock Chi"
+date: "Wednesday, October 21, 2015"
+output: html_document
+---
+
+##Comparing Z CI and T CI
+The regular CI is estimated as the following 
+$$Est \pm ZQ \times SE_{Est}$$
+- Taking an Estimate $\pm$ a quantile from the standard normal distribution (2 for 95%) multiplied by standad error of the estimate
+
+When encountering small sample sizes, rather than using the Z distribution, CI can be calculated using Student's Distribution (T). Note that in the calculation, quantile is taken from the T-Distribution instead.
+$$Est \pm TQ \times SE_{Est}$$
+
+##Gosset's t distribution
+When we normalize data, we estimate it as:
+$$\bar X \pm t_{n-1} S/\sqrt{n}$ where $t_{n-1}$$
+
+However, when we use $s$ to estimate $\sigma$, the resultant distribution is not standard normal. Instead, it resembles the t distribution, where as n increases (increasing degrees of freedom), then it becomes standard normal.
+
+- While the standard normal distribution is index by two parameters, the mean and standard deviation, the t distribution is only indexed by the degrees of freedom
+- As degrees of freedom increase, it becomes more and more like a standard normal
+Intervals will be wider. As you collect more data, T-interval will become Z-interval
+
+To show the difference between the two distributions, we use the following simulation.
+
+```{r, echo=TRUE}
+library(ggplot2); library(manipulate)
+k <- 1000
+xvals <- seq(-5, 5, length = k)
+myplot <- function(df){
+  d <- data.frame(y = c(dnorm(xvals), dt(xvals, df)),
+                  x = xvals,
+                  dist = factor(rep(c("Normal", "T"), c(k,k))))
+  g <- ggplot(d, aes(x = x, y = y)) 
+  g <- g + geom_line(size = 2, aes(colour = dist))
+  g
+}
+myplot(1)
+myplot(5)
+myplot(10)
+```
+
+Placing focus on the quantile differences:
+
+```{r, echo=TRUE}
+pvals <- seq(.5, .99, by = .01)
+myplot2 <- function(df){
+  d <- data.frame(n= qnorm(pvals),t=qt(pvals, df),
+                  p = pvals)
+  g <- ggplot(d, aes(x= n, y = t))
+  g <- g + geom_abline(size = 2, col = "lightblue")
+  g <- g + geom_line(size = 2, col = "black")
+  g <- g + geom_vline(xintercept = qnorm(0.975))
+  g <- g + geom_hline(yintercept = qt(0.975, df))
+  g
+}
+myplot2(1)
+myplot2(5)
+myplot2(10)
+```
+
+CI's from T CI will always be wider than the Normal Z CI.
+
+###t Distribution Assumptions
+- t interval assumes that the data is iid normal
+- works well when the distribution is symmetrical and mound shaped
+- converges to the same CLT intervals as degree of freedom increases
+
+###t CI for Skewed Distributions
+- assumptions of t interval will be violated when distribution is skewed
+- You can alternatively log or use a different centrality measure like median
+- Other procedures like bootstrap intervals
+- Also not preferable for highly discrete data (ie. binary)
+
+##t Test for Unpaired Groups
+In the following scenario, we wish to compare mean value between two groups. Members allocated to each group are randomized so paird t test cannot be used. Additionally, sample size may be different between the two group. The following is the mean difference and t CI calculation:
+
+$$ \bar Y - \bar X \pm t_{n_x + n_y - 2, 1 - \alpha/2}S_p\left(\frac{1}{n_x} + \frac{1}{n_y}\right)^{1/2} $$
+
+Since the two groups are different, it may also be the case that variance from each group is different. The following weights the variance coming from each group (Pooled Variance Estimate) and is used in the Unpaired T Test
+
+$$S_p^2 = {(n_x - 1) S_x^2 + (n_y - 1) S_y^2}/(n_x + n_y - 2)$$ 
+
+- this test assumes that variance is constant across the two groups
+
+##Mistaken Groups (assigning Paired as UnPaired)
+In the sample below we test the difference when unpaired t-test is run on paired data.
+
+```{r}
+data(sleep)
+g1 <- sleep$extra[1 : 10]; g2 <- sleep$extra[11 : 20]
+
+n1 <- length(g1); n2 <- length(g2)
+sp <- sqrt( ((n1 - 1) * sd(g1)^2 + (n2-1) * sd(g2)^2) / (n1 + n2-2))
+md <- mean(g2) - mean(g1)
+semd <- sp * sqrt(1 / n1 + 1/n2)
+rbind(
+#Hand-Calculated
+md + c(-1, 1) * qt(.975, n1 + n2 - 2) * semd,  
+#Paired
+t.test(g2, g1, paired = FALSE, var.equal = TRUE)$conf,
+#Mistaen UnPaired
+t.test(g2, g1, paired = TRUE)$conf
+)
+```
+
+As we can see from the third entry, CI of UnPaired show a different result than Paired. To explain why, the following graphic visulises the difference. When using UnPaired T-Test, we are comparing the difference of the entire group, between Factor 1 and Factor 2. However, by using Paired, we are comparing the variance between Factor 1 value and Factor 2 value across ID. 
+
+```{r, echo=TRUE}
+library(ggplot2)
+g <- ggplot(sleep, aes(x = group, y = extra, group = factor(ID)))
+g <- g + geom_line(size = 1, aes(colour = ID)) + geom_point(size =10, pch = 21, fill = "salmon", alpha = .5)
+g
+```
+
+Variance is less inflated with Paired because initial value can explain higher subsequent value. (inter-subject variability)
+
