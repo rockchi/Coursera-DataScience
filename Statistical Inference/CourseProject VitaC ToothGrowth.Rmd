@@ -1,0 +1,89 @@
+---
+title: "CourseProject VitaC and ToothGrowth"
+output: pdf_document
+---
+
+##Part II: ToothGrowth
+For the 2nd part of the project, we are assigned to investigate the ToothGrowth dataset provided in R. As a brief background of the dataset, the data was drawn from a study regarding the effect of vitamin C. The length of odontoblasts in 60 guinea pigs were recorded after treatment of varying vitamin C dosage. Dosages (ranging from 0.5 to 2mg/day) were also delivered by two methods, via orange juice or ascorbic acid.
+
+##Data Overview
+```{r, echo=TRUE}
+str(ToothGrowth)
+```
+
+##Exploratory -- Univariate
+
+```{r, echo=TRUE}
+#Summary Statistics of Tooth Length
+summary(ToothGrowth$len)
+#Distribution of Tooth Length
+a <- ggplot(ToothGrowth, aes(x=len)) +
+  geom_density() +
+  scale_x_continuous(breaks=seq(0, 35,5)) +
+  xlab("Tooth Length")
+b <- ggplot(ToothGrowth, aes(x=factor(1), y=len), color="red") +
+  geom_boxplot() +
+  scale_y_continuous(breaks=seq(0,35,5)) +
+  xlab("Tooth Length") + ylab("Unit Measure")
+grid.arrange(a, b, ncol=2, widths=c(1,0.25), heights=c(7,1))
+```
+
+```{r, echo=TRUE}
+#Summary Statistics of Tooth Length
+summary(ToothGrowth$len)
+#Boxplot and Scatterplot -- Length by Supp
+a <- ggplot(ToothGrowth, aes(x=supp)) +
+  geom_bar(aes(fill=factor(dose))) +
+  scale_y_discrete(breaks=seq(0,30,5))
+b <- ggplot(ToothGrowth, aes(x=factor(dose))) +
+  geom_bar() +
+  facet_grid(.~supp)
+grid.arrange(a, b, ncol=2, widths=c(1,1), heights=c(7,1))
+#Density Distribution of Length by Supp
+ggplot(ToothGrowth, aes(x=len, fill=factor(dose))) +
+  geom_density(alpha=0.2)
+```
+From this graphic, we are able to pull additional information regarding the study. Of the 60 guinea pigs, 30 each are assigned to each delivery method (left graphic). Of each delivery method, 10 of each are assigned to the three dosage categories (0.5, 1 and 2)
+
+##Exploratory -- Bivariate
+```{r, echo=TRUE}
+#Boxplot and Scatterplot - Length by Dose
+a <- ggplot(ToothGrowth, aes(x=factor(dose), y=len)) +
+  geom_boxplot(aes(stat="identity")) +
+  scale_y_continuous(breaks=seq(0,35,5))
+b <- ggplot(ToothGrowth, aes(x=dose, y=len)) +
+  geom_point(aes(color=factor(supp))) +
+  scale_y_continuous(breaks=seq(0,35,5))
+grid.arrange(a, b, ncol=2, widths=c(0.5,1), heights=c(7,1))
+#Density Distribution of Length by Group(Dose)
+ggplot(ToothGrowth, aes(x=len, fill=supp)) +
+  geom_density(alpha=0.2)
+```
+Visually comparing the medians, we can observe that guinea pigs that recieved higher dosage (1-2mmg) tend to have higher tooth length compared to those that only have 0.5mmg dosage. Further, when adding delivery method represented by color (left graph), we see that for 0.5 and 1.0 dosage, guinea pigs tended to have higher tooth length.
+
+```{r, echo=TRUE}
+#Boxplot and Scatterplot -- Length by Supp(Delivery)
+a <- ggplot(ToothGrowth, aes(x=supp, y=len)) +
+  geom_boxplot(aes(stat="identity")) +
+  scale_y_continuous(breaks=seq(0,35,5))
+b <- ggplot(ToothGrowth, aes(x=supp, y=len)) +
+  geom_point(aes(color=factor(dose))) +
+  scale_y_continuous(breaks=seq(0,35,5))
+grid.arrange(a, b, ncol=2, widths=c(0.5,1), heights=c(7,1))
+```
+
+##Data Summary
+```{r, echo=TRUE}
+#Statistics -- Length by Dose
+ToothGrowth %>% 
+  group_by(supp) %>% 
+  summarise(n= length(supp), GrpMean=round(mean(len),2), GrpVar=round(var(len),2), GrpSD=round(sd(len),2))
+```
+
+
+```{r, echo=TRUE}
+#Statistics -- Length by Supp(Delivery)
+ToothGrowth %>% 
+  group_by(factor(dose)) %>% 
+  summarise(n= length(dose), GrpMean=round(mean(len),2), GrpVar=round(var(len),2), GrpSD=round(sd(len),2))
+```
